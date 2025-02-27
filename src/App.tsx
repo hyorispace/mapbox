@@ -33,6 +33,15 @@ function App() {
     const draw = new MapboxDraw(drawOptions);
 
     mapRef.current.addControl(draw, "bottom-left");
+
+    mapRef.current.on("draw.modechange", (e) => {
+      console.log(draw.getAll().features);
+      const { features } = draw.getAll();
+
+      if (e.mode === "draw_polygon" && features[0].geometry.coordinates[0][0]) {
+        draw.deleteAll().changeMode("draw_polygon");
+      }
+    });
   };
 
   return (
@@ -50,6 +59,7 @@ function App() {
         mapStyle="mapbox://styles/mapbox/streets-v12"
         projection="globe"
         onLoad={handleMapLoad}
+        style={{ width: "1048px", height: "500px" }}
       >
         <NavigationControl position="bottom-left" />
         <FullscreenControl position="bottom-left" />
