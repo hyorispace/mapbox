@@ -3,12 +3,12 @@ import Map, {
   GeolocateControl,
   MapRef,
   NavigationControl,
-} from "react-map-gl/mapbox";
-import "mapbox-gl/dist/mapbox-gl.css";
-import { useRef } from "react";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-import drawOptions from "./constants/drawOptions";
+} from 'react-map-gl/mapbox';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { useRef } from 'react';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import drawOptions from './constants/drawOptions';
+import DrawControl from './components/controls/DrawControl';
 
 function App() {
   // const [selectedLocation, setSelectedLocation] = useState<{
@@ -27,25 +27,8 @@ function App() {
   //   );
   // };
 
-  const handleMapLoad = () => {
-    if (!mapRef.current) return;
-
-    const draw = new MapboxDraw(drawOptions);
-
-    mapRef.current.addControl(draw, "bottom-left");
-
-    mapRef.current.on("draw.modechange", (e) => {
-      console.log(draw.getAll().features);
-      const { features } = draw.getAll();
-
-      if (e.mode === "draw_polygon" && features[0].geometry.coordinates[0][0]) {
-        draw.deleteAll().changeMode("draw_polygon");
-      }
-    });
-  };
-
   return (
-    <div className="w-screen h-screen flex items-center justify-center">
+    <div className='w-screen h-screen flex items-center justify-center'>
       <Map
         ref={mapRef}
         initialViewState={{
@@ -55,15 +38,15 @@ function App() {
           bearing: 0, // 회전 각도 (0도)
           pitch: 0, // 기울기 (0도)
         }}
-        mapboxAccessToken="pk.eyJ1IjoiaHlvcmlib2dvIiwiYSI6ImNtN2UyNnluZzBhbHAyaXIwcnp2Z20zamIifQ.RHqv-yu6nlFY2aFIHLHh3Q"
-        mapStyle="mapbox://styles/mapbox/streets-v12"
-        projection="globe"
-        onLoad={handleMapLoad}
-        style={{ width: "1048px", height: "500px" }}
+        mapboxAccessToken='pk.eyJ1IjoiaHlvcmlib2dvIiwiYSI6ImNtN2UyNnluZzBhbHAyaXIwcnp2Z20zamIifQ.RHqv-yu6nlFY2aFIHLHh3Q'
+        mapStyle='mapbox://styles/mapbox/streets-v12'
+        projection='globe'
+        style={{ width: '1048px', height: '500px' }}
       >
-        <NavigationControl position="bottom-left" />
-        <FullscreenControl position="bottom-left" />
-        <GeolocateControl position="bottom-left" />
+        <DrawControl position='bottom-left' {...drawOptions} />
+        <NavigationControl position='bottom-left' />
+        <FullscreenControl position='bottom-left' />
+        <GeolocateControl position='bottom-left' />
       </Map>
     </div>
   );
