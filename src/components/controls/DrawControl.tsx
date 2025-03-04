@@ -1,6 +1,7 @@
 import MapboxDraw, { DrawMode } from "@mapbox/mapbox-gl-draw";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { ControlPosition, MapRef, useControl } from "react-map-gl/mapbox";
+import noop from "../../utils/noop";
 
 type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
   position?: ControlPosition;
@@ -15,25 +16,13 @@ type Geometry = {
 };
 
 const DrawControl = ({
-  onCreate = () => {},
-  onUpdate = () => {},
-  onDelete = () => {},
+  onCreate = noop,
+  onUpdate = noop,
+  onDelete = noop,
   ...props
 }: DrawControlProps) => {
-  const drawRef = useRef<MapboxDraw>(new MapboxDraw(props));
-
-  const onModeChange = useCallback((e: { mode: DrawMode }) => {
-    const { features } = drawRef.current.getAll();
-    if (
-      e.mode === "draw_polygon" &&
-      (features[0].geometry as unknown as Geometry).coordinates[0][0]
-    ) {
-      drawRef.current.deleteAll().changeMode("draw_polygon");
-    }
-  }, []);
-
-  useControl<MapboxDraw>(
-    () => drawRef.current,
+  const draw = useControl<MapboxDraw>(
+    () => new MapboxDraw(props),
     ({ map }: { map: MapRef }) => {
       map.on("draw.create", onCreate);
       map.on("draw.update", onUpdate);
@@ -49,6 +38,19 @@ const DrawControl = ({
     {
       position: props.position,
     }
+  );
+
+  const onModeChange = useCallback(
+    (e: { mode: DrawMode }) => {
+      const { features } = draw.getAll();
+      if (
+        e.mode === "draw_polygon" &&
+        (features[0].geometry as unknown as Geometry).coordinates[0][0]
+      ) {
+        draw.deleteAll().changeMode("draw_polygon");
+      }
+    },
+    [draw]
   );
 
   return null;
