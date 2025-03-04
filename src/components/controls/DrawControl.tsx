@@ -1,4 +1,5 @@
 import MapboxDraw, { DrawMode } from "@mapbox/mapbox-gl-draw";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import { useCallback } from "react";
 import { ControlPosition, MapRef, useControl } from "react-map-gl/mapbox";
 import noop from "../../utils/noop";
