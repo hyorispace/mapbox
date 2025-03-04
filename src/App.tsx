@@ -3,12 +3,12 @@ import Map, {
   GeolocateControl,
   MapRef,
   NavigationControl,
-} from 'react-map-gl/mapbox';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { useRef } from 'react';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import drawOptions from './constants/drawOptions';
-import DrawControl from './components/controls/DrawControl';
+} from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
+import { useRef } from "react";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import drawOptions from "./constants/drawOptions";
+import DrawControl from "./components/controls/DrawControl";
 
 function App() {
   // const [selectedLocation, setSelectedLocation] = useState<{
@@ -28,7 +28,7 @@ function App() {
   // };
 
   return (
-    <div className='w-screen h-screen flex items-center justify-center'>
+    <div className="w-screen h-screen flex items-center justify-center">
       <Map
         ref={mapRef}
         initialViewState={{
@@ -38,15 +38,12 @@ function App() {
           bearing: 0, // 회전 각도 (0도)
           pitch: 0, // 기울기 (0도)
         }}
-        mapboxAccessToken='pk.eyJ1IjoiaHlvcmlib2dvIiwiYSI6ImNtN2UyNnluZzBhbHAyaXIwcnp2Z20zamIifQ.RHqv-yu6nlFY2aFIHLHh3Q'
-        mapStyle='mapbox://styles/mapbox/streets-v12'
-        projection='globe'
-        style={{ width: '1048px', height: '500px' }}
+        mapboxAccessToken="pk.eyJ1IjoiaHlvcmlib2dvIiwiYSI6ImNtN2UyNnluZzBhbHAyaXIwcnp2Z20zamIifQ.RHqv-yu6nlFY2aFIHLHh3Q"
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        projection="globe"
+        style={{ width: "1048px", height: "500px" }}
       >
-        <DrawControl position='bottom-left' {...drawOptions} />
-        <NavigationControl position='bottom-left' />
-        <FullscreenControl position='bottom-left' />
-        <GeolocateControl position='bottom-left' />
+        <DrawControl position="top-left" {...drawOptions} />
       </Map>
     </div>
   );
