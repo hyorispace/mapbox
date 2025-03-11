@@ -1,6 +1,5 @@
-import MapboxDraw, { DrawMode } from "@mapbox/mapbox-gl-draw";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-import { useCallback } from "react";
 import { ControlPosition, MapRef, useControl } from "react-map-gl/mapbox";
 import noop from "../../utils/noop";
 
@@ -10,10 +9,6 @@ type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
   onCreate?: (e: { features: object[] }) => void;
   onUpdate?: (e: { features: object[]; action: string }) => void;
   onDelete?: (e: { features: object[] }) => void;
-};
-
-type Geometry = {
-  coordinates: [number, number][][];
 };
 
 const DrawControl = ({
@@ -28,33 +23,37 @@ const DrawControl = ({
       map.on("draw.create", onCreate);
       map.on("draw.update", onUpdate);
       map.on("draw.delete", onDelete);
-      map.on("draw.modechange", onModeChange);
     },
     ({ map }: { map: MapRef }) => {
       map.off("draw.create", onCreate);
       map.off("draw.update", onUpdate);
       map.off("draw.delete", onDelete);
-      map.off("draw.modechange", onModeChange);
     },
     {
       position: props.position,
     }
   );
 
-  const onModeChange = useCallback(
-    (e: { mode: DrawMode }) => {
-      const { features } = draw.getAll();
-      if (
-        e.mode === "draw_polygon" &&
-        (features[0].geometry as unknown as Geometry).coordinates[0][0]
-      ) {
-        draw.deleteAll().changeMode("draw_polygon");
-      }
-    },
-    [draw]
+  return (
+    <div className="absolute top-14 left-[10px] flex gap-[10px]">
+      <button
+        className="cursor-pointer rounded-[5px] bg-white w-10 h-10 flex justify-center items-center border border-[#bdcfe0]"
+        onClick={() => {
+          draw.deleteAll().changeMode("draw_polygon");
+        }}
+      >
+        <img src="/rect.svg" className="w-5 h-5" />
+      </button>
+      <button
+        className="cursor-pointer rounded-[5px] bg-white w-10 h-10 flex justify-center items-center border border-[#bdcfe0]"
+        onClick={() => {
+          draw.deleteAll().changeMode("simple_select");
+        }}
+      >
+        <img src="/trash.svg" className="w-5 h-5" />
+      </button>
+    </div>
   );
-
-  return null;
 };
 
 export default DrawControl;

@@ -2,10 +2,6 @@ import { MapboxDrawOptions } from "@mapbox/mapbox-gl-draw";
 
 const drawOptions: MapboxDrawOptions = {
   displayControlsDefault: false,
-  controls: {
-    polygon: true,
-    trash: true,
-  },
   styles: [
     {
       id: "gl-draw-line",
