@@ -27,20 +27,20 @@ export default function Map() {
       center,
       zoom,
       projection: 'mercator',
-      pitchWithRotate: false,
-      dragPan: false,
-      scrollZoom: false,
-      doubleClickZoom: false,
-      keyboard: false,
-      touchPitch: false,
-      touchZoomRotate: false,
       dragRotate: false,
+      maxPitch: 0,
     });
 
     mapRef.current = map;
 
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.addControl(
+      new mapboxgl.NavigationControl({ showCompass: false }),
+      'top-right'
+    );
     map.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+
+    map.touchZoomRotate.disableRotation(); // 터치: 두 손가락 회전만 끔 (핀치 줌은 유지)
+    map.keyboard.disableRotation(); // 키보드: Shift+←/→ 회전, Shift+↑/↓ 기울기 끔 (이동·줌은 유지)
 
     map.on('moveend', () => {
       const { lng, lat } = map.getCenter();
