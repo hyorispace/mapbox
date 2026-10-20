@@ -6,8 +6,8 @@ import mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const INITIAL_CENTER: [number, number] = [126.978, 37.566];
-const INITIAL_ZOOM = 12;
+const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
+const INITIAL_ZOOM = 6.5;
 
 export default function Map() {
   const [center, setCenter] = useState<[number, number]>(() => INITIAL_CENTER);
@@ -26,6 +26,15 @@ export default function Map() {
       container: mapContainerRef.current!,
       center,
       zoom,
+      projection: 'mercator',
+      pitchWithRotate: false,
+      dragPan: false,
+      scrollZoom: false,
+      doubleClickZoom: false,
+      keyboard: false,
+      touchPitch: false,
+      touchZoomRotate: false,
+      dragRotate: false,
     });
 
     mapRef.current = map;
