@@ -5,17 +5,19 @@ import { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { UrbanAreasLayer } from './UrbanAreasLayer';
 
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
 
-function isStyleReady(map: mapboxgl.Map | null) {
-  return Boolean(map?.style?._loaded);
-}
+const NO_DIFF = { diff: false } as Parameters<mapboxgl.Map['setStyle']>[1];
 
 export default function Map() {
   const [center, setCenter] = useState<[number, number]>(() => INITIAL_CENTER);
   const [zoom, setZoom] = useState(() => INITIAL_ZOOM);
+
+  const [map, setMap] = useState<mapboxgl.Map | null>(null);
+  const [isUrbanVisible, setIsUrbanVisible] = useState(true);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -46,45 +48,14 @@ export default function Map() {
     map.touchZoomRotate.disableRotation(); // 터치: 두 손가락 회전만 끔 (핀치 줌은 유지)
     map.keyboard.disableRotation(); // 키보드: Shift+←/→ 회전, Shift+↑/↓ 기울기 끔 (이동·줌은 유지)
 
-    map.on('style.load', () => {
-      if (isStyleReady(map)) {
-        map.addSource('urban-areas', {
-          type: 'geojson',
-          data: 'https://docs.mapbox.com/mapbox-gl-js/assets/ne_50m_urban_areas.geojson',
-        });
-
-        map.addLayer({
-          id: 'urban-areas-fill',
-          type: 'fill',
-          source: 'urban-areas',
-          layout: {},
-          paint: {
-            'fill-color': '#f08',
-            'fill-opacity': 0.4,
-          },
-        });
-      }
-    });
+    setMap(map);
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setMap(null);
     };
   }, []);
-
-  const handleStyleChange = () => {
-    if (
-      isStyleReady(mapRef.current) ||
-      mapRef.current?.getLayer('urban-areas-fill') === null
-    ) {
-      console.log('헐', mapRef.current?.getLayer('urban-areas-fill'));
-      mapRef.current?.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
-    }
-  };
-
-  const handleStyleReset = () => {
-    mapRef.current?.setStyle('mapbox://styles/mapbox/streets-v12');
-  };
 
   return (
     <div className="flex absolute top-0 left-0 right-0 bottom-0 h-full w-full">
@@ -96,22 +67,39 @@ export default function Map() {
       <button onClick={handleReset}>Reset</button>
 
       <button
-        onClick={handleStyleChange}
+        onClick={() => setIsUrbanVisible((prev) => !prev)}
         className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
       >
-        스타일 전환 버튼
+        도시레이어 토글
       </button>
 
       <button
-        onClick={handleStyleReset}
-        className="cursor-pointer bg-black text-white p-2 rounded-md h-fit w-20"
+        onClick={() =>
+          mapRef.current?.setStyle(
+            'mapbox://styles/mapbox/satellite-streets-v12',
+            NO_DIFF
+          )
+        }
+        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
       >
-        스타일 리셋 버튼
+        위성
+      </button>
+      <button
+        onClick={() =>
+          mapRef.current?.setStyle(
+            'mapbox://styles/mapbox/streets-v12',
+            NO_DIFF
+          )
+        }
+        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+      >
+        일반
       </button>
 
       {/* Map container */}
       <div className="w-3/4">
         <div className="h-full w-full" ref={mapContainerRef} />
+        {map && isUrbanVisible && <UrbanAreasLayer map={map} />}
       </div>
     </div>
   );
