@@ -12,10 +12,13 @@ const INITIAL_ZOOM = 6.5;
 
 const NO_DIFF = { diff: false } as Parameters<mapboxgl.Map['setStyle']>[1];
 
-export default function Map() {
-  const [center, setCenter] = useState<[number, number]>(() => INITIAL_CENTER);
-  const [zoom, setZoom] = useState(() => INITIAL_ZOOM);
+const CITIES = {
+  서울: { center: [126.978, 37.5665], zoom: 10.5 },
+  부산: { center: [129.0756, 35.1796], zoom: 10.5 },
+  제주: { center: [126.55, 33.38], zoom: 9.3 },
+} as const;
 
+export default function Map() {
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
   const [isUrbanVisible, setIsUrbanVisible] = useState(true);
 
@@ -23,15 +26,19 @@ export default function Map() {
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   const handleReset = () => {
-    mapRef.current?.flyTo({ center: INITIAL_CENTER, zoom: INITIAL_ZOOM });
+    mapRef.current?.easeTo({ center: INITIAL_CENTER, zoom: INITIAL_ZOOM });
+  };
+
+  const handleMoveTo = (option: { center: [number, number]; zoom: number }) => {
+    mapRef.current?.flyTo({ center: option.center, zoom: option.zoom });
   };
 
   useEffect(() => {
     const map = new mapboxgl.Map({
       accessToken: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
       container: mapContainerRef.current!,
-      center,
-      zoom,
+      center: INITIAL_CENTER,
+      zoom: INITIAL_ZOOM,
       projection: 'mercator',
       dragRotate: false,
       maxPitch: 0,
@@ -47,6 +54,21 @@ export default function Map() {
 
     map.touchZoomRotate.disableRotation(); // 터치: 두 손가락 회전만 끔 (핀치 줌은 유지)
     map.keyboard.disableRotation(); // 키보드: Shift+←/→ 회전, Shift+↑/↓ 기울기 끔 (이동·줌은 유지)
+
+    let counter = 0;
+
+    map.on('movestart', () => {
+      console.log('movestart');
+    });
+
+    map.on('moveend', () => {
+      console.log('moveend');
+    });
+
+    map.on('move', () => {
+      counter++;
+      console.log(counter);
+    });
 
     setMap(map);
 
@@ -96,10 +118,25 @@ export default function Map() {
         일반
       </button>
 
+      {Object.entries(CITIES).map(([city, option]) => (
+        <button
+          key={city}
+          onClick={() => handleMoveTo(option)}
+          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+        >
+          {city}
+        </button>
+      ))}
+
       {/* Map container */}
-      <div className="w-3/4">
+      <div className="relative w-3/4">
         <div className="h-full w-full" ref={mapContainerRef} />
         {map && isUrbanVisible && <UrbanAreasLayer map={map} />}
+
+        {/* Floating panel over the map */}
+        <div className="absolute top-0 bottom-0 left-0 z-10 w-[300px] bg-white/60 p-4 backdrop-blur-sm">
+          <h2 className="text-lg font-bold">Floating panel</h2>
+        </div>
       </div>
     </div>
   );

@@ -50,7 +50,7 @@ export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
       if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID); // 레이어 먼저
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID); // 소스는 나중
     };
-  }, []);
+  }, [map]);
 
   return null;
 }
