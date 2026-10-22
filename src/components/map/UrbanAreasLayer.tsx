@@ -1,9 +1,22 @@
 import { useEffect } from 'react';
 
-import mapboxgl from 'mapbox-gl';
+const SOURCE_ID = 'cities';
+const LAYER_ID = 'cities-circle';
 
-const SOURCE_ID = 'urban-areas';
-const LAYER_ID = 'urban-areas-fill';
+const CITIES = {
+  서울: { center: [126.978, 37.5665], zoom: 10.5 },
+  부산: { center: [129.0756, 35.1796], zoom: 10.5 },
+  제주: { center: [126.55, 33.38], zoom: 9.3 },
+} as const;
+
+const CITIES_GEOJSON = {
+  type: 'FeatureCollection',
+  features: Object.entries(CITIES).map(([name, { center }]) => ({
+    type: 'Feature',
+    properties: { name },
+    geometry: { type: 'Point', coordinates: center },
+  })),
+};
 
 /** 스타일 설계도(JSON)가 도착했는지. 타일 로딩 여부는 보지 않는다 */
 function isStyleReady(map: mapboxgl.Map) {
@@ -20,15 +33,15 @@ export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
       if (!map.getSource(SOURCE_ID)) {
         map.addSource(SOURCE_ID, {
           type: 'geojson',
-          data: 'https://docs.mapbox.com/mapbox-gl-js/assets/ne_50m_urban_areas.geojson',
+          data: CITIES_GEOJSON,
         });
       }
       if (!map.getLayer(LAYER_ID)) {
         map.addLayer({
           id: LAYER_ID,
-          type: 'fill',
+          type: 'circle',
           source: SOURCE_ID,
-          paint: { 'fill-color': '#f08', 'fill-opacity': 0.4 },
+          paint: { 'circle-color': '#ff0000', 'circle-radius': 4 },
         });
       }
     };

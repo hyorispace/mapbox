@@ -10,27 +10,14 @@ import { UrbanAreasLayer } from './UrbanAreasLayer';
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
 
-const NO_DIFF = { diff: false } as Parameters<mapboxgl.Map['setStyle']>[1];
-
-const CITIES = {
-  서울: { center: [126.978, 37.5665], zoom: 10.5 },
-  부산: { center: [129.0756, 35.1796], zoom: 10.5 },
-  제주: { center: [126.55, 33.38], zoom: 9.3 },
-} as const;
-
 export default function Map() {
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
-  const [isUrbanVisible, setIsUrbanVisible] = useState(true);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   const handleReset = () => {
     mapRef.current?.easeTo({ center: INITIAL_CENTER, zoom: INITIAL_ZOOM });
-  };
-
-  const handleMoveTo = (option: { center: [number, number]; zoom: number }) => {
-    mapRef.current?.flyTo({ center: option.center, zoom: option.zoom });
   };
 
   const handleFitBounds = () => {
@@ -62,21 +49,6 @@ export default function Map() {
     map.touchZoomRotate.disableRotation(); // 터치: 두 손가락 회전만 끔 (핀치 줌은 유지)
     map.keyboard.disableRotation(); // 키보드: Shift+←/→ 회전, Shift+↑/↓ 기울기 끔 (이동·줌은 유지)
 
-    let counter = 0;
-
-    map.on('movestart', () => {
-      console.log('movestart');
-    });
-
-    map.on('moveend', () => {
-      console.log('moveend');
-    });
-
-    map.on('move', () => {
-      counter++;
-      console.log(counter);
-    });
-
     setMap(map);
 
     return () => {
@@ -102,50 +74,10 @@ export default function Map() {
         Fit bounds
       </button>
 
-      {/* <button
-        onClick={() => setIsUrbanVisible((prev) => !prev)}
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        도시레이어 토글
-      </button>
-
-      <button
-        onClick={() =>
-          mapRef.current?.setStyle(
-            'mapbox://styles/mapbox/satellite-streets-v12',
-            NO_DIFF
-          )
-        }
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        위성
-      </button>
-      <button
-        onClick={() =>
-          mapRef.current?.setStyle(
-            'mapbox://styles/mapbox/streets-v12',
-            NO_DIFF
-          )
-        }
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        일반
-      </button>
-
-      {Object.entries(CITIES).map(([city, option]) => (
-        <button
-          key={city}
-          onClick={() => handleMoveTo(option)}
-          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-        >
-          {city}
-        </button>
-      ))} */}
-
       {/* Map container */}
       <div className="relative w-3/4">
         <div className="h-full w-full" ref={mapContainerRef} />
-        {map && isUrbanVisible && <UrbanAreasLayer map={map} />}
+        {map && <UrbanAreasLayer map={map} />}
 
         {/* Floating panel over the map */}
         <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
