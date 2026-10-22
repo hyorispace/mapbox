@@ -71,6 +71,18 @@ export function UrbanAreasLayer({
 
     const visibility = isVisible ? 'visible' : 'none';
 
+    const firstLabelId = map
+      .getStyle()
+      .layers.find(
+        (layer) => layer.type === 'symbol' && layer.layout?.['text-field']
+      )?.id;
+
+    const hasMiddleSlot = map.getSlots()?.includes('middle');
+
+    const placement = hasMiddleSlot
+      ? { slot: 'middle', beforeId: undefined } // Standard: 칸에 넣기
+      : { slot: undefined, beforeId: firstLabelId };
+
     if (!map.getSource(SOURCE_ID)) {
       map.addSource(SOURCE_ID, {
         type: 'geojson',
@@ -78,22 +90,30 @@ export function UrbanAreasLayer({
       });
     }
     if (!map.getLayer(LAYER_FILL_ID)) {
-      map.addLayer({
-        id: LAYER_FILL_ID,
-        type: 'fill',
-        source: SOURCE_ID,
-        layout: { visibility },
-        paint: { 'fill-color': fillColor, 'fill-opacity': 0.4 },
-      });
+      map.addLayer(
+        {
+          id: LAYER_FILL_ID,
+          type: 'fill',
+          source: SOURCE_ID,
+          layout: { visibility },
+          ...(placement.slot && { slot: placement.slot }),
+          paint: { 'fill-color': fillColor, 'fill-opacity': 0.4 },
+        },
+        placement.beforeId
+      );
     }
     if (!map.getLayer(LAYER_LINE_ID)) {
-      map.addLayer({
-        id: LAYER_LINE_ID,
-        type: 'line',
-        source: SOURCE_ID,
-        layout: { visibility },
-        paint: { 'line-color': '#000000', 'line-width': 2 },
-      });
+      map.addLayer(
+        {
+          id: LAYER_LINE_ID,
+          type: 'line',
+          source: SOURCE_ID,
+          layout: { visibility },
+          ...(placement.slot && { slot: placement.slot }),
+          paint: { 'line-color': '#000000', 'line-width': 2 },
+        },
+        placement.beforeId
+      );
     }
   });
 
