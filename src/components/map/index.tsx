@@ -33,6 +33,13 @@ export default function Map() {
     mapRef.current?.flyTo({ center: option.center, zoom: option.zoom });
   };
 
+  const handleFitBounds = () => {
+    mapRef.current?.fitBounds([126.76, 37.41, 127.18, 37.7], {
+      padding: { top: 20, right: 20, bottom: 20, left: 320 },
+      retainPadding: false,
+    });
+  };
+
   useEffect(() => {
     const map = new mapboxgl.Map({
       accessToken: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
@@ -89,6 +96,13 @@ export default function Map() {
       <button onClick={handleReset}>Reset</button>
 
       <button
+        onClick={handleFitBounds}
+        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+      >
+        Fit bounds
+      </button>
+
+      {/* <button
         onClick={() => setIsUrbanVisible((prev) => !prev)}
         className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
       >
@@ -126,7 +140,7 @@ export default function Map() {
         >
           {city}
         </button>
-      ))}
+      ))} */}
 
       {/* Map container */}
       <div className="relative w-3/4">
@@ -134,7 +148,7 @@ export default function Map() {
         {map && isUrbanVisible && <UrbanAreasLayer map={map} />}
 
         {/* Floating panel over the map */}
-        <div className="absolute top-0 bottom-0 left-0 z-10 w-[300px] bg-white/60 p-4 backdrop-blur-sm">
+        <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
           <h2 className="text-lg font-bold">Floating panel</h2>
         </div>
       </div>
