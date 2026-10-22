@@ -4,25 +4,51 @@ const SOURCE_ID = 'cities';
 const LAYER_FILL_ID = 'cities-fill';
 const LAYER_LINE_ID = 'cities-line';
 
-const SEOUL_BOUNDS = [
-  [
-    [126.76, 37.41],
-    [127.18, 37.41],
-    [127.18, 37.7],
-    [126.76, 37.7],
-    [126.76, 37.41],
-  ],
-];
+const SEOUL_BOUNDS = [126.76, 37.41, 127.18, 37.7];
+const BUSAN_BOUNDS = [128.85, 35.05, 129.3, 35.4];
+const JEJU_BOUNDS = [126.15, 33.15, 126.97, 33.57];
 
-const SEOUL_GEOJSON = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: { name: '서울' },
-      geometry: { type: 'Polygon', coordinates: SEOUL_BOUNDS },
-    },
+const POLYGON_COORDINATES_DATA = {
+  seoul: [
+    [
+      [SEOUL_BOUNDS[0], SEOUL_BOUNDS[1]],
+      [SEOUL_BOUNDS[2], SEOUL_BOUNDS[1]],
+      [SEOUL_BOUNDS[2], SEOUL_BOUNDS[3]],
+      [SEOUL_BOUNDS[0], SEOUL_BOUNDS[3]],
+      [SEOUL_BOUNDS[0], SEOUL_BOUNDS[1]],
+    ],
   ],
+  busan: [
+    [
+      [BUSAN_BOUNDS[0], BUSAN_BOUNDS[1]],
+      [BUSAN_BOUNDS[2], BUSAN_BOUNDS[1]],
+      [BUSAN_BOUNDS[2], BUSAN_BOUNDS[3]],
+      [BUSAN_BOUNDS[0], BUSAN_BOUNDS[3]],
+      [BUSAN_BOUNDS[0], BUSAN_BOUNDS[1]],
+    ],
+  ],
+  jeju: [
+    [
+      [JEJU_BOUNDS[0], JEJU_BOUNDS[1]],
+      [JEJU_BOUNDS[2], JEJU_BOUNDS[1]],
+      [JEJU_BOUNDS[2], JEJU_BOUNDS[3]],
+      [JEJU_BOUNDS[0], JEJU_BOUNDS[3]],
+      [JEJU_BOUNDS[0], JEJU_BOUNDS[1]],
+    ],
+  ],
+};
+
+const getGeoJSON = (name: string, polygonCoordinates: number[][][]) => {
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: { name },
+        geometry: { type: 'Polygon', coordinates: polygonCoordinates },
+      },
+    ],
+  };
 };
 
 /** 스타일 설계도(JSON)가 도착했는지. 타일 로딩 여부는 보지 않는다 */
@@ -30,7 +56,12 @@ function isStyleReady(map: mapboxgl.Map) {
   return Boolean(map.style?._loaded);
 }
 
-export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
+type TProps = {
+  map: mapboxgl.Map;
+  urbanArea: 'seoul' | 'busan' | 'jeju';
+};
+
+export function UrbanAreasLayer({ map, urbanArea }: TProps) {
   useEffect(() => {
     let isMapRemoved = false;
 
@@ -40,7 +71,7 @@ export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
       if (!map.getSource(SOURCE_ID)) {
         map.addSource(SOURCE_ID, {
           type: 'geojson',
-          data: SEOUL_GEOJSON,
+          data: getGeoJSON(urbanArea, POLYGON_COORDINATES_DATA.seoul),
         });
       }
       if (!map.getLayer(LAYER_FILL_ID)) {
@@ -80,6 +111,12 @@ export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID); // 소스는 나중
     };
   }, [map]);
+
+  useEffect(() => {
+    map
+      .getSource<mapboxgl.GeoJSONSource>(SOURCE_ID)
+      ?.setData(getGeoJSON(urbanArea, POLYGON_COORDINATES_DATA[urbanArea]));
+  }, [map, urbanArea]);
 
   return null;
 }

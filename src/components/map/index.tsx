@@ -10,8 +10,12 @@ import { UrbanAreasLayer } from './UrbanAreasLayer';
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
 
+const URBAN_AREAS = ['seoul', 'busan', 'jeju'] as const;
+
 export default function Map() {
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
+  const [selectedUrbanArea, setSelectedUrbanArea] =
+    useState<(typeof URBAN_AREAS)[number]>('seoul');
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -74,10 +78,20 @@ export default function Map() {
         Fit bounds
       </button>
 
+      {URBAN_AREAS.map((urbanArea) => (
+        <button
+          key={urbanArea}
+          onClick={() => setSelectedUrbanArea(urbanArea)}
+          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+        >
+          {urbanArea}
+        </button>
+      ))}
+
       {/* Map container */}
       <div className="relative w-3/4">
         <div className="h-full w-full" ref={mapContainerRef} />
-        {map && <UrbanAreasLayer map={map} />}
+        {map && <UrbanAreasLayer map={map} urbanArea={selectedUrbanArea} />}
 
         {/* Floating panel over the map */}
         <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
