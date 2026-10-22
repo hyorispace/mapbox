@@ -1,21 +1,28 @@
 import { useEffect } from 'react';
 
 const SOURCE_ID = 'cities';
-const LAYER_ID = 'cities-circle';
+const LAYER_FILL_ID = 'cities-fill';
+const LAYER_LINE_ID = 'cities-line';
 
-const CITIES = {
-  서울: { center: [126.978, 37.5665], zoom: 10.5 },
-  부산: { center: [129.0756, 35.1796], zoom: 10.5 },
-  제주: { center: [126.55, 33.38], zoom: 9.3 },
-} as const;
+const SEOUL_BOUNDS = [
+  [
+    [126.76, 37.41],
+    [127.18, 37.41],
+    [127.18, 37.7],
+    [126.76, 37.7],
+    [126.76, 37.41],
+  ],
+];
 
-const CITIES_GEOJSON = {
+const SEOUL_GEOJSON = {
   type: 'FeatureCollection',
-  features: Object.entries(CITIES).map(([name, { center }]) => ({
-    type: 'Feature',
-    properties: { name },
-    geometry: { type: 'Point', coordinates: center },
-  })),
+  features: [
+    {
+      type: 'Feature',
+      properties: { name: '서울' },
+      geometry: { type: 'Polygon', coordinates: SEOUL_BOUNDS },
+    },
+  ],
 };
 
 /** 스타일 설계도(JSON)가 도착했는지. 타일 로딩 여부는 보지 않는다 */
@@ -33,15 +40,23 @@ export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
       if (!map.getSource(SOURCE_ID)) {
         map.addSource(SOURCE_ID, {
           type: 'geojson',
-          data: CITIES_GEOJSON,
+          data: SEOUL_GEOJSON,
         });
       }
-      if (!map.getLayer(LAYER_ID)) {
+      if (!map.getLayer(LAYER_FILL_ID)) {
         map.addLayer({
-          id: LAYER_ID,
-          type: 'circle',
+          id: LAYER_FILL_ID,
+          type: 'fill',
           source: SOURCE_ID,
-          paint: { 'circle-color': '#ff0000', 'circle-radius': 4 },
+          paint: { 'fill-color': '#ff4c4c', 'fill-opacity': 0.4 },
+        });
+      }
+      if (!map.getLayer(LAYER_LINE_ID)) {
+        map.addLayer({
+          id: LAYER_LINE_ID,
+          type: 'line',
+          source: SOURCE_ID,
+          paint: { 'line-color': '#000000', 'line-width': 2 },
         });
       }
     };
@@ -60,7 +75,8 @@ export function UrbanAreasLayer({ map }: { map: mapboxgl.Map }) {
 
       if (isMapRemoved || !isStyleReady(map)) return;
 
-      if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID); // 레이어 먼저
+      if (map.getLayer(LAYER_FILL_ID)) map.removeLayer(LAYER_FILL_ID); // 레이어 먼저
+      if (map.getLayer(LAYER_LINE_ID)) map.removeLayer(LAYER_LINE_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID); // 소스는 나중
     };
   }, [map]);
