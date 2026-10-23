@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import MapGL, {
   type MapRef,
   NavigationControl,
   ScaleControl,
-  useMap,
 } from 'react-map-gl/mapbox';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -74,49 +73,39 @@ export default function Map() {
       </div>
 
       <button onClick={handleReset}>Reset</button>
-
-      <button
-        onClick={handleFitBounds}
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        Fit bounds
-      </button>
-
-      <button
-        onClick={() => setFillColor(BLUE_FILL_COLOR)}
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        파랑
-      </button>
-      <button
-        onClick={() => setIsUrbanVisible((prev) => !prev)}
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        {isUrbanVisible ? '숨기기' : '보이기'}
-      </button>
-
-      <button
-        onClick={() => setMapStyle('satellite')}
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        위성
-      </button>
-      <button
-        onClick={() => setMapStyle('streets')}
-        className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-      >
-        일반
-      </button>
-
-      {URBAN_AREAS.map((urbanArea) => (
+      <div className="flex gap-4 flex-wrap">
         <button
-          key={urbanArea}
-          onClick={() => setSelectedUrbanArea(urbanArea)}
+          onClick={() => setIsUrbanVisible((prev) => !prev)}
           className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
         >
-          {urbanArea}
+          {isUrbanVisible ? '숨기기' : '보이기'}
         </button>
-      ))}
+
+        <button
+          onClick={() => setMapStyle('satellite')}
+          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+        >
+          위성
+        </button>
+        <button
+          onClick={() => setMapStyle('streets')}
+          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+        >
+          일반
+        </button>
+
+        <div>
+          {URBAN_AREAS.map((urbanArea) => (
+            <button
+              key={urbanArea}
+              onClick={() => setSelectedUrbanArea(urbanArea)}
+              className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+            >
+              {urbanArea}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Map container */}
       <div className="relative w-3/4">
@@ -127,13 +116,32 @@ export default function Map() {
             const name = e.features?.[0]?.properties?.name;
 
             if (name) {
+              console.log(e.features?.[0].id);
               console.log(`선택한 도시: ${name}`);
             }
 
             console.log(`경도 ${e.lngLat.lng} 근처, 위도 ${e.lngLat.lat} 근처`);
           }}
           onMouseEnter={() => setCursor('pointer')}
-          onMouseLeave={() => setCursor('')}
+          onMouseLeave={(e) => {
+            setCursor('');
+            const id = e.features?.[0]?.id;
+            if (id === undefined) return; // 영역 밖이면 아무것도 안 한다
+
+            mapRef.current?.setFeatureState(
+              { source: 'cities', id },
+              { hover: false }
+            );
+          }}
+          onMouseMove={(e) => {
+            const id = e.features?.[0]?.id;
+            if (id === undefined) return; // 영역 밖이면 아무것도 안 한다
+
+            mapRef.current?.setFeatureState(
+              { source: 'cities', id },
+              { hover: true }
+            );
+          }}
           cursor={cursor}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
           initialViewState={{
@@ -157,7 +165,6 @@ export default function Map() {
           {/* 스타일마다 끼울 자리가 달라서, 스타일이 바뀌면 레이어를 새로 마운트한다 */}
           <UrbanAreasLayer
             key={mapStyle}
-            urbanArea={selectedUrbanArea}
             fillColor={fillColor}
             isVisible={isUrbanVisible}
             placement={MAP_STYLES[mapStyle].placement}

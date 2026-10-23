@@ -1,6 +1,5 @@
-import { Layer, MapMouseEvent, Source, useMap } from 'react-map-gl/mapbox';
-import type { FeatureCollection } from 'geojson';
-import { useEffect } from 'react';
+import { Layer, Source } from 'react-map-gl/mapbox';
+import type { FeatureCollection, Polygon } from 'geojson';
 
 const SOURCE_ID = 'cities';
 const LAYER_FILL_ID = 'cities-fill';
@@ -18,41 +17,37 @@ export type TUrbanArea = keyof typeof URBAN_AREA_BOUNDS;
 /** 레이어를 끼울 자리. Standard는 slot, 클래식은 첫 라벨 레이어 바로 아래 */
 export type TLayerPlacement = { slot: 'middle' } | { beforeId: string };
 
-/** bbox를 사각형 Polygon 하나가 담긴 FeatureCollection으로 바꾼다 */
-function bboxToGeoJSON(
-  name: string,
-  [west, south, east, north]: readonly number[]
-): FeatureCollection {
+/** bbox를 사각형 Polygon으로 바꾼다 */
+function bboxToPolygon([west, south, east, north]: readonly number[]): Polygon {
   return {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        properties: { name },
-        geometry: {
-          type: 'Polygon',
-          // (서,남) → (동,남) → (동,북) → (서,북) → 첫 점으로 닫기
-          coordinates: [
-            [
-              [west, south],
-              [east, south],
-              [east, north],
-              [west, north],
-              [west, south],
-            ],
-          ],
-        },
-      },
+    type: 'Polygon',
+    // (서,남) → (동,남) → (동,북) → (서,북) → 첫 점으로 닫기
+    coordinates: [
+      [
+        [west, south],
+        [east, south],
+        [east, north],
+        [west, north],
+        [west, south],
+      ],
     ],
   };
 }
 
-function getUrbanAreaGeoJSON(urbanArea: TUrbanArea) {
-  return bboxToGeoJSON(urbanArea, URBAN_AREA_BOUNDS[urbanArea]);
-}
+/** 세 도시 영역을 Feature 3개로 담는다. id는 feature-state로 하나씩 가리키기 위한 숫자다 */
+const URBAN_AREAS_GEOJSON: FeatureCollection = {
+  type: 'FeatureCollection',
+  features: (Object.keys(URBAN_AREA_BOUNDS) as TUrbanArea[]).map(
+    (name, index) => ({
+      type: 'Feature',
+      id: index + 1, // properties 안이 아니라 Feature 바로 아래에 둔다
+      properties: { name },
+      geometry: bboxToPolygon(URBAN_AREA_BOUNDS[name]),
+    })
+  ),
+};
 
 type TProps = {
-  urbanArea: TUrbanArea;
   fillColor: string;
   isVisible: boolean;
   placement: TLayerPlacement;
@@ -64,21 +59,24 @@ type TProps = {
  * - paint/layout이 바뀌면 Layer가 바뀐 키만 setPaintProperty/setLayoutProperty 한다
  * - setStyle로 지워지면 styledata 때 지금 props로 다시 만든다
  */
-export function UrbanAreasLayer({
-  urbanArea,
-  fillColor,
-  isVisible,
-  placement,
-}: TProps) {
+export function UrbanAreasLayer({ fillColor, isVisible, placement }: TProps) {
   const visibility = isVisible ? 'visible' : 'none';
 
   return (
-    <Source id={SOURCE_ID} type="geojson" data={getUrbanAreaGeoJSON(urbanArea)}>
+    <Source id={SOURCE_ID} type="geojson" data={URBAN_AREAS_GEOJSON}>
       <Layer
         id={LAYER_FILL_ID}
         type="fill"
         layout={{ visibility }}
-        paint={{ 'fill-color': fillColor, 'fill-opacity': 0.4 }}
+        paint={{
+          'fill-color': fillColor,
+          'fill-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            0.8,
+            0.3,
+          ],
+        }}
         {...placement}
       />
       <Layer
