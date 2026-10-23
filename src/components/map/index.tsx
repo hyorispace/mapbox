@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import MapGL, {
   type MapRef,
   NavigationControl,
+  Popup,
   ScaleControl,
 } from 'react-map-gl/mapbox';
 
@@ -44,6 +45,13 @@ const MAP_STYLES = {
 
 type TMapStyle = keyof typeof MAP_STYLES;
 
+/** 팝업을 띄울 위치와 내용. null이면 팝업이 닫혀 있다 */
+type TPopupInfo = {
+  longitude: number;
+  latitude: number;
+  name: string;
+} | null;
+
 export default function Map() {
   const [cursor, setCursor] = useState('');
   const [mapStyle, setMapStyle] = useState<TMapStyle>('standard');
@@ -51,6 +59,7 @@ export default function Map() {
     useState<TUrbanArea>('seoul');
   const [fillColor, setFillColor] = useState(DEFAULT_FILL_COLOR);
   const [isUrbanVisible, setIsUrbanVisible] = useState(true);
+  const [popupInfo, setPopupInfo] = useState<TPopupInfo>(null);
 
   const mapRef = useRef<MapRef>(null);
 
@@ -115,12 +124,12 @@ export default function Map() {
           onClick={(e) => {
             const name = e.features?.[0]?.properties?.name;
 
-            if (name) {
-              console.log(e.features?.[0].id);
-              console.log(`선택한 도시: ${name}`);
-            }
-
-            console.log(`경도 ${e.lngLat.lng} 근처, 위도 ${e.lngLat.lat} 근처`);
+            // 영역 밖을 누르면 닫고, 영역을 누르면 그 위치로 팝업을 옮긴다
+            setPopupInfo(
+              typeof name === 'string'
+                ? { longitude: e.lngLat.lng, latitude: e.lngLat.lat, name }
+                : null
+            );
           }}
           onMouseEnter={() => setCursor('pointer')}
           onMouseLeave={(e) => {
@@ -169,6 +178,27 @@ export default function Map() {
             isVisible={isUrbanVisible}
             placement={MAP_STYLES[mapStyle].placement}
           />
+
+          {popupInfo && (
+            <Popup
+              longitude={popupInfo.longitude}
+              latitude={popupInfo.latitude}
+              offset={10}
+              // 지도 클릭으로 여닫기를 onClick에서 직접 하므로, mapbox의 "다른 곳 클릭 시 닫기"는 끈다
+              closeOnClick={false}
+              onClose={() => setPopupInfo(null)}
+            >
+              <div className="flex flex-col gap-2">
+                <strong>{popupInfo.name}</strong>
+                <button
+                  onClick={() => setPopupInfo(null)}
+                  className="bg-black text-white px-2 py-1 rounded-md cursor-pointer"
+                >
+                  닫기
+                </button>
+              </div>
+            </Popup>
+          )}
         </MapGL>
 
         {/* Floating panel over the map */}
