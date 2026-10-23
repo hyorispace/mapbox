@@ -1,8 +1,8 @@
 import { Layer, Source } from 'react-map-gl/mapbox';
 import type { FeatureCollection, Polygon } from 'geojson';
 
-const SOURCE_ID = 'cities';
-const LAYER_FILL_ID = 'cities-fill';
+export const SOURCE_ID = 'cities';
+export const LAYER_FILL_ID = 'cities-fill';
 const LAYER_LINE_ID = 'cities-line';
 
 /** 도시별 영역 [서, 남, 동, 북] */

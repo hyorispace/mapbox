@@ -10,6 +10,8 @@ import MapGL, {
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
+  LAYER_FILL_ID,
+  SOURCE_ID,
   type TLayerPlacement,
   type TUrbanArea,
   UrbanAreasLayer,
@@ -60,6 +62,7 @@ export default function Map() {
   const [fillColor, setFillColor] = useState(DEFAULT_FILL_COLOR);
   const [isUrbanVisible, setIsUrbanVisible] = useState(true);
   const [popupInfo, setPopupInfo] = useState<TPopupInfo>(null);
+  const [visibleUrbanAreas, setVisibleUrbanAreas] = useState<string[]>([]);
 
   const mapRef = useRef<MapRef>(null);
 
@@ -120,7 +123,19 @@ export default function Map() {
       <div className="relative w-3/4">
         <MapGL
           ref={mapRef}
-          interactiveLayerIds={['cities-fill']}
+          interactiveLayerIds={[LAYER_FILL_ID]}
+          onMoveEnd={(e) => {
+            // 지금 화면에 그려진 도시 영역만 찾는다. 숨긴 레이어나 화면 밖 feature는 빠진다
+            const features = e.target.queryRenderedFeatures({
+              layers: [LAYER_FILL_ID],
+            });
+            const names = features
+              .map((feature) => feature.properties?.name)
+              .filter((name): name is string => typeof name === 'string');
+
+            // 타일 경계에 걸친 영역은 조각마다 따로 나오므로 이름으로 중복을 없앤다
+            setVisibleUrbanAreas([...new Set(names)]);
+          }}
           onClick={(e) => {
             const name = e.features?.[0]?.properties?.name;
 
@@ -138,7 +153,7 @@ export default function Map() {
             if (id === undefined) return; // 영역 밖이면 아무것도 안 한다
 
             mapRef.current?.setFeatureState(
-              { source: 'cities', id },
+              { source: SOURCE_ID, id },
               { hover: false }
             );
           }}
@@ -147,7 +162,7 @@ export default function Map() {
             if (id === undefined) return; // 영역 밖이면 아무것도 안 한다
 
             mapRef.current?.setFeatureState(
-              { source: 'cities', id },
+              { source: SOURCE_ID, id },
               { hover: true }
             );
           }}
@@ -203,7 +218,16 @@ export default function Map() {
 
         {/* Floating panel over the map */}
         <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
-          <h2 className="text-lg font-bold">Floating panel</h2>
+          <h2 className="text-lg font-bold">화면에 보이는 도시</h2>
+          {visibleUrbanAreas.length > 0 ? (
+            <ul className="mt-2 list-disc pl-5">
+              {visibleUrbanAreas.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm">없음 (지도를 움직이면 갱신된다)</p>
+          )}
         </div>
       </div>
     </div>
