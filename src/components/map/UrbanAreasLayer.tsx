@@ -1,5 +1,6 @@
-import { Layer, Source } from 'react-map-gl/mapbox';
+import { Layer, MapMouseEvent, Source, useMap } from 'react-map-gl/mapbox';
 import type { FeatureCollection } from 'geojson';
+import { useEffect } from 'react';
 
 const SOURCE_ID = 'cities';
 const LAYER_FILL_ID = 'cities-fill';
@@ -72,11 +73,7 @@ export function UrbanAreasLayer({
   const visibility = isVisible ? 'visible' : 'none';
 
   return (
-    <Source
-      id={SOURCE_ID}
-      type="geojson"
-      data={getUrbanAreaGeoJSON(urbanArea)}
-    >
+    <Source id={SOURCE_ID} type="geojson" data={getUrbanAreaGeoJSON(urbanArea)}>
       <Layer
         id={LAYER_FILL_ID}
         type="fill"

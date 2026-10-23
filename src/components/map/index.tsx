@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MapGL, {
   type MapRef,
   NavigationControl,
   ScaleControl,
+  useMap,
 } from 'react-map-gl/mapbox';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -45,6 +46,7 @@ const MAP_STYLES = {
 type TMapStyle = keyof typeof MAP_STYLES;
 
 export default function Map() {
+  const [cursor, setCursor] = useState('');
   const [mapStyle, setMapStyle] = useState<TMapStyle>('standard');
   const [selectedUrbanArea, setSelectedUrbanArea] =
     useState<TUrbanArea>('seoul');
@@ -120,6 +122,19 @@ export default function Map() {
       <div className="relative w-3/4">
         <MapGL
           ref={mapRef}
+          interactiveLayerIds={['cities-fill']}
+          onClick={(e) => {
+            const name = e.features?.[0]?.properties?.name;
+
+            if (name) {
+              console.log(`선택한 도시: ${name}`);
+            }
+
+            console.log(`경도 ${e.lngLat.lng} 근처, 위도 ${e.lngLat.lat} 근처`);
+          }}
+          onMouseEnter={() => setCursor('pointer')}
+          onMouseLeave={() => setCursor('')}
+          cursor={cursor}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
           initialViewState={{
             longitude: INITIAL_CENTER[0],
