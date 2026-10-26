@@ -1,29 +1,62 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import MapGL, {
   type MapRef,
   NavigationControl,
   Popup,
   ScaleControl,
 } from 'react-map-gl/mapbox';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
-  LAYER_FILL_ID,
   SOURCE_ID,
   type TLayerPlacement,
   type TUrbanArea,
-  UrbanAreasLayer,
 } from './UrbanAreasLayer';
+import SatelliteLayer from './SatelliteLayer';
+import ImageLayer from './ImageLayer';
 
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
 
+/** 서울 영역 [서, 남, 동, 북] */
+const SEOUL_BOUNDS: [number, number, number, number] = [
+  126.76, 37.41, 127.18, 37.7,
+];
+
 const URBAN_AREAS: TUrbanArea[] = ['seoul', 'busan', 'jeju'];
 
+/** 투명 픽셀 하나짜리 PNG. 막은 타일 자리에 돌려준다 */
+const EMPTY_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+/** 위성 타일 주소에서 z/x/y를 뽑는다. 배경지도 벡터 타일(.vector.pbf)은 걸리지 않는다 */
+const SATELLITE_TILE_PATTERN = /mapbox\.satellite\/(\d+)\/(\d+)\/(\d+)/;
+
+/** 이 타일 z부터 위성 타일을 받지 않는다. tileSize 256이라 지도 줌으로는 약 14부터다 */
+const SATELLITE_BLOCK_MIN_TILE_ZOOM = 15;
+
+/**
+ * 지도가 보내는 모든 요청이 지나간다. 지도를 만들 때 한 번만 쓰이므로 React state를 읽지 않는다.
+ * 고해상도 위성 타일만 빈 이미지로 바꾸고, 나머지는 그대로 보낸다.
+ */
+function transformRequest(url: string, resourceType?: string) {
+  if (resourceType !== 'Tile') {
+    return { url };
+  }
+
+  const match = url.match(SATELLITE_TILE_PATTERN);
+  if (!match) {
+    return { url };
+  }
+
+  const z = Number(match[1]);
+  return { url: z >= SATELLITE_BLOCK_MIN_TILE_ZOOM ? EMPTY_PNG : url };
+}
+
 const DEFAULT_FILL_COLOR = '#ff4c4c';
-const BLUE_FILL_COLOR = '#0000FF';
 
 /**
  * 스타일별 URL과 내 레이어를 끼울 자리.
@@ -57,12 +90,12 @@ type TPopupInfo = {
 export default function Map() {
   const [cursor, setCursor] = useState('');
   const [mapStyle, setMapStyle] = useState<TMapStyle>('standard');
-  const [selectedUrbanArea, setSelectedUrbanArea] =
-    useState<TUrbanArea>('seoul');
-  const [fillColor, setFillColor] = useState(DEFAULT_FILL_COLOR);
+  const [, setSelectedUrbanArea] = useState<TUrbanArea>('seoul');
   const [isUrbanVisible, setIsUrbanVisible] = useState(true);
   const [popupInfo, setPopupInfo] = useState<TPopupInfo>(null);
-  const [visibleUrbanAreas, setVisibleUrbanAreas] = useState<string[]>([]);
+  const [visibleUrbanAreas] = useState<string[]>([]);
+  const [satelliteOpacity, setSatelliteOpacity] = useState(0.8);
+  const [isSatelliteGrayscale, setIsSatelliteGrayscale] = useState(false);
 
   const mapRef = useRef<MapRef>(null);
 
@@ -70,20 +103,8 @@ export default function Map() {
     mapRef.current?.easeTo({ center: INITIAL_CENTER, zoom: INITIAL_ZOOM });
   };
 
-  const handleFitBounds = () => {
-    mapRef.current?.fitBounds([126.76, 37.41, 127.18, 37.7], {
-      padding: { top: 20, right: 20, bottom: 20, left: 320 },
-      retainPadding: false,
-    });
-  };
-
   return (
     <div className="flex absolute top-0 left-0 right-0 bottom-0 h-full w-full">
-      {/* Sidebar placeholder */}
-      <div className="w-1/4 p-4 bg-sg-light-green">
-        <h2 className="text-sg-green text-xl font-bold">Stores nearby:</h2>
-      </div>
-
       <button onClick={handleReset}>Reset</button>
       <div className="flex gap-4 flex-wrap">
         <button
@@ -106,6 +127,24 @@ export default function Map() {
           일반
         </button>
 
+        <label className="flex flex-col text-sm">
+          위성사진 투명도 {satelliteOpacity.toFixed(2)}
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={satelliteOpacity}
+            onChange={(e) => setSatelliteOpacity(Number(e.target.value))}
+          />
+        </label>
+        <button
+          onClick={() => setIsSatelliteGrayscale((prev) => !prev)}
+          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+        >
+          {isSatelliteGrayscale ? '컬러' : '흑백'}
+        </button>
+
         <div>
           {URBAN_AREAS.map((urbanArea) => (
             <button
@@ -123,19 +162,7 @@ export default function Map() {
       <div className="relative w-3/4">
         <MapGL
           ref={mapRef}
-          interactiveLayerIds={[LAYER_FILL_ID]}
-          onMoveEnd={(e) => {
-            // 지금 화면에 그려진 도시 영역만 찾는다. 숨긴 레이어나 화면 밖 feature는 빠진다
-            const features = e.target.queryRenderedFeatures({
-              layers: [LAYER_FILL_ID],
-            });
-            const names = features
-              .map((feature) => feature.properties?.name)
-              .filter((name): name is string => typeof name === 'string');
-
-            // 타일 경계에 걸친 영역은 조각마다 따로 나오므로 이름으로 중복을 없앤다
-            setVisibleUrbanAreas([...new Set(names)]);
-          }}
+          transformRequest={transformRequest}
           onClick={(e) => {
             const name = e.features?.[0]?.properties?.name;
 
@@ -187,12 +214,15 @@ export default function Map() {
           <NavigationControl position="top-right" showCompass={false} />
           <ScaleControl position="bottom-left" />
           {/* 스타일마다 끼울 자리가 달라서, 스타일이 바뀌면 레이어를 새로 마운트한다 */}
-          <UrbanAreasLayer
-            key={mapStyle}
-            fillColor={fillColor}
-            isVisible={isUrbanVisible}
-            placement={MAP_STYLES[mapStyle].placement}
-          />
+          <Fragment key={mapStyle}>
+            <SatelliteLayer
+              placement={MAP_STYLES[mapStyle].placement}
+              opacity={satelliteOpacity}
+              isGrayscale={isSatelliteGrayscale}
+              bounds={SEOUL_BOUNDS}
+            />
+            <ImageLayer placement={MAP_STYLES[mapStyle].placement} />
+          </Fragment>
 
           {popupInfo && (
             <Popup
