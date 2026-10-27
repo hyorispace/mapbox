@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { useControl } from 'react-map-gl/mapbox';
-import MapboxDraw, { type DrawCreateEvent } from '@mapbox/mapbox-gl-draw';
+import type MapboxDraw from '@mapbox/mapbox-gl-draw';
+import type { DrawCreateEvent } from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import turfArea from '@turf/area';
 import kinks from '@turf/kinks';
@@ -12,53 +12,55 @@ const MIN_AREA_KM2 = 25;
 /** 쓸 수 없는 도형의 이유. null이면 문제없다 */
 export type TDrawError = 'area' | 'geometry' | null;
 
-type TProps = {
-  /** 그린 도형의 면적(㎢, 반올림 전 값). 도형이 없으면 0 */
-  setArea: (area: number) => void;
-  setError: (error: TDrawError) => void;
+/** 지금 그려진 도형의 상태 */
+export type TShape = {
+  /** 면적(㎢, 반올림 전 값). 도형이 없으면 0 */
+  area: number;
+  error: TDrawError;
 };
+
+export const EMPTY_SHAPE: TShape = { area: 0, error: null };
 
 function isPolygonFeature(feature: Feature): feature is Feature<Polygon> {
   return feature.geometry.type === 'Polygon';
 }
 
-export default function DrawControl({ setArea, setError }: TProps) {
-  // 핸들러가 draw를 읽어야 해서 useControl보다 먼저, 처음 한 번만 만든다
-  const [draw] = useState(
-    () =>
-      new MapboxDraw({
-        displayControlsDefault: false,
-        controls: { polygon: true, trash: true },
-      })
-  );
+/**
+ * Draw에 지금 그려진 도형의 면적과 오류를 계산한다.
+ * 도형의 주인은 Draw이므로, 사용자가 그렸든 코드로 넣었든 바뀐 뒤에 이걸로 다시 읽는다.
+ */
+export function readShape(draw: MapboxDraw): TShape {
+  const feature = draw.getAll().features.at(-1);
 
-  // 도형의 주인은 Draw다. 바뀔 때마다 Draw에서 지금 도형을 읽어 면적과 오류를 다시 계산한다
+  // 마지막 도형을 지웠으면 빈 상태다
+  if (!feature || !isPolygonFeature(feature)) {
+    return EMPTY_SHAPE;
+  }
+
+  const area = turfArea(feature) / 1_000_000;
+
+  // 꼬인 도형은 고리끼리 면적이 상쇄돼 면적 값을 믿을 수 없으므로 먼저 본다
+  if (kinks(feature).features.length > 0) {
+    return { area, error: 'geometry' };
+  }
+
+  // 반올림하지 않은 값으로 비교한다
+  if (area < MIN_AREA_KM2) {
+    return { area, error: 'area' };
+  }
+
+  return { area, error: null };
+}
+
+type TProps = {
+  /** 부모가 처음 한 번 만들어 넘긴다. 버튼 등 지도 밖에서도 Draw에 명령해야 하기 때문이다 */
+  draw: MapboxDraw;
+  onShapeChange: (shape: TShape) => void;
+};
+
+export default function DrawControl({ draw, onShapeChange }: TProps) {
   const syncShape = () => {
-    const feature = draw.getAll().features.at(-1);
-
-    // 마지막 도형을 지웠으면 빈 상태로 돌린다
-    if (!feature || !isPolygonFeature(feature)) {
-      setArea(0);
-      setError(null);
-      return;
-    }
-
-    const areaKm2 = turfArea(feature) / 1_000_000;
-    setArea(areaKm2);
-
-    // 꼬인 도형은 고리끼리 면적이 상쇄돼 면적 값을 믿을 수 없으므로 먼저 본다
-    if (kinks(feature).features.length > 0) {
-      setError('geometry');
-      return;
-    }
-
-    // 반올림하지 않은 값으로 비교한다
-    if (areaKm2 < MIN_AREA_KM2) {
-      setError('area');
-      return;
-    }
-
-    setError(null);
+    onShapeChange(readShape(draw));
   };
 
   // AOI는 하나만: 방금 그린 도형만 남기고 나머지는 지운다
