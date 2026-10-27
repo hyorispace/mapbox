@@ -8,7 +8,7 @@ import MapGL, {
 } from 'react-map-gl/mapbox';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import DrawControl from './DrawControl';
+import DrawControl, { type TDrawError } from './DrawControl';
 
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
@@ -30,7 +30,7 @@ const MAP_STYLE_KEYS = Object.keys(MAP_STYLES) as TMapStyle[];
 export default function Map() {
   const [mapStyle, setMapStyle] = useState<TMapStyle>('standard');
   const [area, setArea] = useState(0);
-  const [error, setError] = useState<'area' | 'geometry' | null>(null);
+  const [error, setError] = useState<TDrawError>(null);
 
   const mapRef = useRef<MapRef>(null);
 
@@ -88,11 +88,12 @@ export default function Map() {
         {/* Floating panel over the map */}
         <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
           <h2 className="text-lg font-bold">패널</h2>
-          <p>면적: {area}km²</p>
-          {error && (
-            <p className="text-red-500">
-              {error === 'area' ? '면적 부족' : '선이 꼬였다'}
-            </p>
+          <p>면적: {area.toFixed(1)} ㎢</p>
+          {error === 'geometry' && (
+            <p className="text-red-600">선이 꼬였습니다</p>
+          )}
+          {error === 'area' && (
+            <p className="text-red-600">최소 25㎢ 이상 그려야 합니다</p>
           )}
         </div>
       </div>

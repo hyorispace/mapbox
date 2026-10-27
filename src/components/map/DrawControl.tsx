@@ -1,17 +1,26 @@
 import { useState } from 'react';
 import { useControl } from 'react-map-gl/mapbox';
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import MapboxDraw, { type DrawCreateEvent } from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import turfArea from '@turf/area';
-import { Geometry } from 'geojson';
 import kinks from '@turf/kinks';
+import type { Feature, Polygon } from 'geojson';
+
+/** 위성 촬영 최소 주문 면적 (㎢) */
+const MIN_AREA_KM2 = 25;
+
+/** 쓸 수 없는 도형의 이유. null이면 문제없다 */
+export type TDrawError = 'area' | 'geometry' | null;
 
 type TProps = {
-  /** 그려진 도형 개수가 바뀔 수 있을 때마다 지금 개수를 알려준다 */
+  /** 그린 도형의 면적(㎢, 반올림 전 값). 도형이 없으면 0 */
   setArea: (area: number) => void;
-  setError: (error: 'area' | 'geometry' | null) => void;
+  setError: (error: TDrawError) => void;
 };
-const km2 = (geometry: Geometry) => turfArea(geometry) / 1_000_000;
+
+function isPolygonFeature(feature: Feature): feature is Feature<Polygon> {
+  return feature.geometry.type === 'Polygon';
+}
 
 export default function DrawControl({ setArea, setError }: TProps) {
   // 핸들러가 draw를 읽어야 해서 useControl보다 먼저, 처음 한 번만 만든다
@@ -23,49 +32,59 @@ export default function DrawControl({ setArea, setError }: TProps) {
       })
   );
 
-  const deleteAll = () => {
-    // Draw에서 방금 그린 id만 남기고 나머지는 지운다
-    const features = draw.getAll().features;
-    const id = features.slice(0, -1).map((feature) => feature.id);
-    draw.delete(id as string[]);
+  // 도형의 주인은 Draw다. 바뀔 때마다 Draw에서 지금 도형을 읽어 면적과 오류를 다시 계산한다
+  const syncShape = () => {
+    const feature = draw.getAll().features.at(-1);
 
-    syncCount();
-  };
-
-  // 도형의 주인은 Draw다. 직접 세지 않고, 바뀔 때마다 Draw에게 지금 개수를 물어본다
-  const syncCount = () => {
-    const features = draw.getAll().features;
-    const geometry = features[features.length - 1].geometry;
-    const area = Math.round(km2(geometry));
-    setArea(area);
-
-    if (area < 25) {
-      setError('area');
+    // 마지막 도형을 지웠으면 빈 상태로 돌린다
+    if (!feature || !isPolygonFeature(feature)) {
+      setArea(0);
+      setError(null);
       return;
     }
-    // kinks는 선·다각형만 받는다. Draw는 Geometry를 돌려줘서 Point까지 포함된다.
-    if (
-      (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') &&
-      kinks(geometry).features.length > 0
-    ) {
+
+    const areaKm2 = turfArea(feature) / 1_000_000;
+    setArea(areaKm2);
+
+    // 꼬인 도형은 고리끼리 면적이 상쇄돼 면적 값을 믿을 수 없으므로 먼저 본다
+    if (kinks(feature).features.length > 0) {
       setError('geometry');
+      return;
+    }
+
+    // 반올림하지 않은 값으로 비교한다
+    if (areaKm2 < MIN_AREA_KM2) {
+      setError('area');
       return;
     }
 
     setError(null);
   };
 
+  // AOI는 하나만: 방금 그린 도형만 남기고 나머지는 지운다
+  const handleCreate = (e: DrawCreateEvent) => {
+    const keepIds = new Set(e.features.map((feature) => feature.id));
+    const removeIds = draw
+      .getAll()
+      .features.map((feature) => feature.id)
+      .filter((id): id is string => typeof id === 'string' && !keepIds.has(id));
+
+    // api.delete는 draw.delete 이벤트를 내지 않으므로 아래에서 직접 다시 맞춘다
+    draw.delete(removeIds);
+    syncShape();
+  };
+
   useControl(
     () => draw,
     ({ map }) => {
-      map.on('draw.create', deleteAll);
-      map.on('draw.update', syncCount);
-      map.on('draw.delete', syncCount);
+      map.on('draw.create', handleCreate);
+      map.on('draw.update', syncShape);
+      map.on('draw.delete', syncShape);
     },
     ({ map }) => {
-      map.off('draw.create', deleteAll);
-      map.off('draw.update', syncCount);
-      map.off('draw.delete', syncCount);
+      map.off('draw.create', handleCreate);
+      map.off('draw.update', syncShape);
+      map.off('draw.delete', syncShape);
     },
     { position: 'top-right' }
   );
