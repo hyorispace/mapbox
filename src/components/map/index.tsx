@@ -6,9 +6,9 @@ import MapGL, {
   NavigationControl,
   ScaleControl,
 } from 'react-map-gl/mapbox';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
+import DrawControl from './DrawControl';
 
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
@@ -29,6 +29,8 @@ const MAP_STYLE_KEYS = Object.keys(MAP_STYLES) as TMapStyle[];
 
 export default function Map() {
   const [mapStyle, setMapStyle] = useState<TMapStyle>('standard');
+  const [area, setArea] = useState(0);
+  const [error, setError] = useState<'area' | 'geometry' | null>(null);
 
   const mapRef = useRef<MapRef>(null);
 
@@ -78,6 +80,7 @@ export default function Map() {
             e.target.keyboard.disableRotation(); // 키보드: Shift+←/→ 회전, Shift+↑/↓ 기울기 끔 (이동·줌은 유지)
           }}
         >
+          <DrawControl setArea={setArea} setError={setError} />
           <NavigationControl position="top-right" showCompass={false} />
           <ScaleControl position="bottom-left" />
         </MapGL>
@@ -85,6 +88,12 @@ export default function Map() {
         {/* Floating panel over the map */}
         <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
           <h2 className="text-lg font-bold">패널</h2>
+          <p>면적: {area}km²</p>
+          {error && (
+            <p className="text-red-500">
+              {error === 'area' ? '면적 부족' : '선이 꼬였다'}
+            </p>
+          )}
         </div>
       </div>
     </div>
