@@ -11,7 +11,12 @@ import bbox from '@turf/bbox';
 import type { Feature, Polygon } from 'geojson';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import DrawControl, { EMPTY_SHAPE, readShape, type TShape } from './DrawControl';
+import DrawControl, {
+  EMPTY_SHAPE,
+  readShape,
+  type TShape,
+} from './DrawControl';
+import DrawRectangle from './DrawRectangle';
 
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
@@ -60,6 +65,10 @@ export default function Map() {
       new MapboxDraw({
         displayControlsDefault: false,
         controls: { polygon: true, trash: true },
+        modes: {
+          ...MapboxDraw.modes,
+          draw_rectangle: DrawRectangle,
+        },
       })
   );
 
@@ -86,34 +95,8 @@ export default function Map() {
 
   return (
     <div className="flex absolute top-0 left-0 right-0 bottom-0 h-full w-full">
-      <div className="flex gap-4 flex-wrap">
-        <button
-          onClick={handleReset}
-          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-        >
-          Reset
-        </button>
-
-        {MAP_STYLE_KEYS.map((style) => (
-          <button
-            key={style}
-            onClick={() => setMapStyle(style)}
-            className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-          >
-            {MAP_STYLES[style].label}
-          </button>
-        ))}
-
-        <button
-          onClick={handleLoadSeoul}
-          className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
-        >
-          서울 불러오기
-        </button>
-      </div>
-
       {/* Map container */}
-      <div className="relative w-3/4">
+      <div className="relative w-full">
         <MapGL
           ref={mapRef}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
@@ -141,6 +124,37 @@ export default function Map() {
         {/* Floating panel over the map */}
         <div className="absolute top-0 bottom-0 left-0 z-10 w-75 bg-white/60 p-4 backdrop-blur-sm">
           <h2 className="text-lg font-bold">패널</h2>
+          <button
+            onClick={handleReset}
+            className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+          >
+            Reset
+          </button>
+
+          <button
+            onClick={() => {
+              draw.changeMode('draw_rectangle');
+            }}
+          >
+            직사각형 그리기
+          </button>
+
+          {MAP_STYLE_KEYS.map((style) => (
+            <button
+              key={style}
+              onClick={() => setMapStyle(style)}
+              className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+            >
+              {MAP_STYLES[style].label}
+            </button>
+          ))}
+
+          <button
+            onClick={handleLoadSeoul}
+            className="bg-black text-white p-2 rounded-md h-fit w-20 cursor-pointer"
+          >
+            서울 불러오기
+          </button>
           <p>면적: {shape.area.toFixed(1)} ㎢</p>
           {shape.error === 'geometry' && (
             <p className="text-red-600">선이 꼬였습니다</p>
