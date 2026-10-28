@@ -6,6 +6,8 @@ import turfArea from '@turf/area';
 import kinks from '@turf/kinks';
 import type { Feature, Polygon } from 'geojson';
 
+import { INVALID_PROPERTY } from './drawStyles';
+
 /** 위성 촬영 최소 주문 면적 (㎢) */
 const MIN_AREA_KM2 = 25;
 
@@ -29,7 +31,7 @@ function isPolygonFeature(feature: Feature): feature is Feature<Polygon> {
  * Draw에 지금 그려진 도형의 면적과 오류를 계산한다.
  * 도형의 주인은 Draw이므로, 사용자가 그렸든 코드로 넣었든 바뀐 뒤에 이걸로 다시 읽는다.
  */
-export function readShape(draw: MapboxDraw): TShape {
+function readShape(draw: MapboxDraw): TShape {
   const feature = draw.getAll().features.at(-1);
 
   // 마지막 도형을 지웠으면 빈 상태다
@@ -52,6 +54,22 @@ export function readShape(draw: MapboxDraw): TShape {
   return { area, error: null };
 }
 
+/**
+ * 도형을 다시 읽고, 잘못된 도형이면 스타일이 빨갛게 그리도록 속성을 단다.
+ * 도형이 바뀐 뒤에는 readShape 대신 이걸 부른다.
+ */
+export function checkShape(draw: MapboxDraw): TShape {
+  const shape = readShape(draw);
+  const feature = draw.getAll().features.at(-1);
+
+  if (typeof feature?.id === 'string') {
+    // setFeatureProperty는 draw.update를 내지 않으므로 update 핸들러 안에서 불러도 반복되지 않는다
+    draw.setFeatureProperty(feature.id, INVALID_PROPERTY, shape.error !== null);
+  }
+
+  return shape;
+}
+
 type TProps = {
   /** 부모가 처음 한 번 만들어 넘긴다. 버튼 등 지도 밖에서도 Draw에 명령해야 하기 때문이다 */
   draw: MapboxDraw;
@@ -60,7 +78,7 @@ type TProps = {
 
 export default function DrawControl({ draw, onShapeChange }: TProps) {
   const syncShape = () => {
-    onShapeChange(readShape(draw));
+    onShapeChange(checkShape(draw));
   };
 
   // AOI는 하나만: 방금 그린 도형만 남기고 나머지는 지운다

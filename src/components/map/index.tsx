@@ -12,11 +12,12 @@ import type { Feature, Polygon } from 'geojson';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import DrawControl, {
+  checkShape,
   EMPTY_SHAPE,
-  readShape,
   type TShape,
 } from './DrawControl';
 import DrawRectangle from './DrawRectangle';
+import { DRAW_STYLES } from './drawStyles';
 
 const INITIAL_CENTER: [number, number] = [127.42961, 35.91911];
 const INITIAL_ZOOM = 6.5;
@@ -69,6 +70,9 @@ export default function Map() {
           ...MapboxDraw.modes,
           draw_rectangle: DrawRectangle,
         },
+        styles: DRAW_STYLES,
+        // 내가 단 속성(invalid)을 스타일에서 user_invalid로 읽을 수 있게 한다
+        userProperties: true,
       })
   );
 
@@ -84,7 +88,7 @@ export default function Map() {
     draw.add(SEOUL_FEATURE);
 
     // draw.add/deleteAll은 draw.create 등 이벤트를 내지 않으므로 직접 다시 읽는다
-    setShape(readShape(draw));
+    setShape(checkShape(draw));
 
     const [west, south, east, north] = bbox(SEOUL_FEATURE);
     mapRef.current?.fitBounds([west, south, east, north], {
